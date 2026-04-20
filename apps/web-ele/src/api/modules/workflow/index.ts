@@ -140,6 +140,28 @@ export namespace WorkflowApi {
     finishedAt?: string;
     elapsedMs?: number;
   }
+
+  export interface WfTask {
+    id: number;
+    instanceId: number;
+    definitionId?: number;
+    definitionCode?: string;
+    nodeId: string;
+    nodeName: string;
+    assigneeType?: number;
+    assigneeExpr?: string;
+    assigneeId?: number;
+    assigneeName?: string;
+    title?: string;
+    content?: string;
+    status: number;
+    opinion?: string;
+    action?: string;
+    operatorId?: number;
+    operatorName?: string;
+    operatedAt?: string;
+    createdTime?: string;
+  }
 }
 
 // ==================== API 方法 ====================
@@ -176,4 +198,21 @@ export const workflowInstanceApi = {
 
   my: (params: any) =>
     requestClient.get<PageResult<WorkflowApi.WfInstance>>('/workflow/instance/my', { params }),
+};
+
+export const workflowTaskApi = {
+  instance: (instanceId: number) =>
+    requestClient.get<WorkflowApi.WfTask[]>(`/workflow/task/instance/${instanceId}`),
+
+  my: (params: any) =>
+    requestClient.get<PageResult<WorkflowApi.WfTask>>('/workflow/task/my', { params }),
+
+  approve: (data: {
+    instanceId: number;
+    taskId: number;
+    approved: boolean;
+    opinion?: string;
+    operatorId?: number;
+    operatorName?: string;
+  }) => requestClient.post('/workflow/callback/approve', data),
 };

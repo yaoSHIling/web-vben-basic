@@ -87,6 +87,69 @@
           </el-descriptions-item>
         </el-descriptions>
 
+        <el-card shadow="never" class="mb-4">
+          <template #header>
+            <div class="flex items-center justify-between">
+              <span class="font-medium">审批任务</span>
+              <el-button size="small" text @click="reloadDetail">
+                <icon-refresh /> 刷新任务
+              </el-button>
+            </div>
+          </template>
+          <el-empty v-if="!tasks.length" description="当前实例暂无审批任务" :image-size="80" />
+          <el-table v-else :data="tasks" size="small" stripe>
+            <el-table-column prop="nodeName" label="节点" min-width="120" />
+            <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="assigneeName" label="审批人" width="120">
+              <template #default="{ row }">
+                {{ row.assigneeName || row.assigneeExpr || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="任务状态" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag size="small" :type="taskStatusTagType(row.status)">
+                  {{ taskStatusLabel(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="opinion" label="审批意见" min-width="160" show-overflow-tooltip>
+              <template #default="{ row }">
+                {{ row.opinion || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="operatedAt" label="处理时间" width="160">
+              <template #default="{ row }">
+                {{ row.operatedAt || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="150" fixed="right">
+              <template #default="{ row }">
+                <template v-if="row.status === 0">
+                  <el-button
+                    link
+                    type="success"
+                    size="small"
+                    :loading="submittingTaskId === row.id"
+                    @click="handleApprove(row, true)"
+                  >
+                    通过
+                  </el-button>
+                  <el-button
+                    link
+                    type="danger"
+                    size="small"
+                    :loading="submittingTaskId === row.id"
+                    @click="handleApprove(row, false)"
+                  >
+                    驳回
+                  </el-button>
+                </template>
+                <span v-else class="text-gray-400">已处理</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+
         <!-- 日志时间线 -->
         <el-timeline>
           <el-timeline-item
@@ -123,26 +186,29 @@
 </template>
 
 <script setup lang="ts" name="WorkflowInstancePage">
-import { ref, reactive, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
-import { workflowInstanceApi } from '#/api/modules/workflow';
+import { onMounted, reactive, ref } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import type { WorkflowApi } from '#/api/modules/workflow';
+import { workflowInstanceApi, workflowTaskApi } from '#/api/modules/workflow';
 
 definePage({ meta: { title: '执行记录', icon: 'lucide:history' } });
 
 const loading = ref(false);
-const list = ref<any[]>([]);
+const list = ref<WorkflowApi.WfInstance[]>([]);
 const total = ref(0);
 const query = reactive({ page: 1, pageSize: 10, status: undefined as number | undefined, keyword: '' });
 
 const logDrawerVisible = ref(false);
-const currentInstance = ref<any>(null);
-const logs = ref<any[]>([]);
+const currentInstance = ref<WorkflowApi.WfInstance | null>(null);
+const logs = ref<WorkflowApi.WfInstanceLog[]>([]);
+const tasks = ref<WorkflowApi.WfTask[]>([]);
+const submittingTaskId = ref<number | null>(null);
 
 const nodeIcons: Record<string, string> = {
-  start: '\ud83d\udd28', end: '\u2705', llm: '\ud83e\udde0', code: '\ud83d\udcbb',
-  condition: '\ud83d\udd22', approval: '\ud83d\udcbc', http: '\ud83d\udcce',
-  variable: '\u2699\ufe0f', loop: '\ud83d\udd01', subflow: '\ud83d\udcda',
-  message: '\ud83d\udce7', database: '\ud83d\udcbe',
+  start: '🔨', end: '✅', llm: '🧠', code: '💻',
+  condition: '🔢', approval: '💼', http: '📎',
+  variable: '⚙️', loop: '🔁', subflow: '📚',
+  message: '📧', database: '💾',
 };
 
 async function loadData() {
@@ -158,37 +224,95 @@ async function loadData() {
   }
 }
 
-async function openDetail(row: any) {
-  currentInstance.value = row;
-  logDrawerVisible.value = true;
+async function reloadDetail() {
+  const instanceId = currentInstance.value?.id;
+  if (!instanceId) return;
   try {
-    logs.value = await workflowInstanceApi.logs(row.id);
+    const [instance, instanceLogs, instanceTasks] = await Promise.all([
+      workflowInstanceApi.get(instanceId),
+      workflowInstanceApi.logs(instanceId),
+      workflowTaskApi.instance(instanceId),
+    ]);
+    currentInstance.value = instance;
+    logs.value = instanceLogs;
+    tasks.value = instanceTasks;
   } catch {
-    ElMessage.error('加载日志失败');
+    ElMessage.error('刷新详情失败');
   }
 }
 
-function openLogs(row: any) {
+async function openDetail(row: WorkflowApi.WfInstance) {
+  currentInstance.value = row;
+  logDrawerVisible.value = true;
+  await reloadDetail();
+}
+
+function openLogs(row: WorkflowApi.WfInstance) {
   openDetail(row);
 }
 
+async function handleApprove(task: WorkflowApi.WfTask, approved: boolean) {
+  const instanceId = currentInstance.value?.id;
+  if (!instanceId) return;
+
+  try {
+    const { value } = await ElMessageBox.prompt(
+      approved ? '请输入审批意见（可为空）' : '请输入驳回原因（可为空）',
+      approved ? '审批通过' : '审批驳回',
+      {
+        inputPlaceholder: approved ? '同意，继续流转' : '请填写驳回原因',
+        confirmButtonText: approved ? '确认通过' : '确认驳回',
+        cancelButtonText: '取消',
+      },
+    );
+
+    submittingTaskId.value = task.id;
+    await workflowTaskApi.approve({
+      instanceId,
+      taskId: task.id,
+      approved,
+      opinion: value || '',
+    });
+
+    ElMessage.success(approved ? '审批已通过' : '审批已驳回');
+    await Promise.all([loadData(), reloadDetail()]);
+  } catch (error: any) {
+    if (error !== 'cancel' && error !== 'close') {
+      ElMessage.error(error?.message || '审批失败');
+    }
+  } finally {
+    submittingTaskId.value = null;
+  }
+}
+
 function statusLabel(v?: number) {
-  return { 0: '运行中', 1: '成功', 2: '失败', 3: '暂停' }[v || 0] || '未知';
+  return { 0: '运行中', 1: '成功', 2: '失败', 3: '暂停' }[v ?? 0] || '未知';
 }
 function statusTagType(v?: number) {
-  return { 0: 'primary', 1: 'success', 2: 'danger', 3: 'warning' }[v || 0] || 'info';
+  return { 0: 'primary', 1: 'success', 2: 'danger', 3: 'warning' }[v ?? 0] || 'info';
+}
+function taskStatusLabel(v?: number) {
+  return { 0: '待审批', 1: '已通过', 2: '已转交', 3: '已驳回' }[v ?? 0] || '未知';
+}
+function taskStatusTagType(v?: number) {
+  return { 0: 'warning', 1: 'success', 2: 'info', 3: 'danger' }[v ?? 0] || 'info';
 }
 function logStatusLabel(v?: number) {
-  return { 0: '等待', 1: '运行中', 2: '成功', 3: '失败' }[v || 0] || '';
+  return { 0: '等待', 1: '运行中', 2: '成功', 3: '失败' }[v ?? 0] || '';
 }
 function logStatusColor(v?: number) {
-  return { 0: 'info', 1: 'primary', 2: 'success', 3: 'danger' }[v || 0] || 'info';
+  return { 0: 'info', 1: 'primary', 2: 'success', 3: 'danger' }[v ?? 0] || 'info';
 }
-function nodeIcon(type?: string) { return nodeIcons[type || ''] || '\u25cf'; }
+function nodeIcon(type?: string) {
+  return nodeIcons[type || ''] || '●';
+}
 function formatJson(str?: string) {
   if (!str) return '-';
-  try { return JSON.stringify(JSON.parse(str), null, 2).slice(0, 100); }
-  catch { return str; }
+  try {
+    return JSON.stringify(JSON.parse(str), null, 2).slice(0, 200);
+  } catch {
+    return str;
+  }
 }
 
 onMounted(loadData);
