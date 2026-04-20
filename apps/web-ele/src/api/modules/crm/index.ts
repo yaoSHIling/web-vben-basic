@@ -2,7 +2,9 @@ import type { PageResult, PageParams } from '#/types';
 import { requestClient } from '#/api/request';
 
 export namespace CrmApi {
-  /** 客户状态枚举 */
+  // ===================== 枚举 =====================
+
+  /** 客户状态 */
   export const CustomerStatus = {
     POTENTIAL: 1,  // 潜在
     INTENT: 2,     // 意向
@@ -17,6 +19,15 @@ export namespace CrmApi {
     NORMAL: 3,     // 普通
   } as const;
 
+  /** 客户来源 */
+  export const CustomerSource = {
+    OFFICIAL: '官网',        // 官网
+    EXHIBITION: '展会',      // 展会
+    REFERRAL: '转介绍',      // 转介绍
+    OUTBOUND: '电话拓展',    // 电话拓展
+    OTHER: '其他',           // 其他
+  } as const;
+
   /** 跟进方式 */
   export const FollowupType = {
     PHONE: 1,   // 电话
@@ -26,8 +37,23 @@ export namespace CrmApi {
     OTHER: 5,   // 其他
   } as const;
 
-  // ===== 客户相关 =====
+  /** 任务状态 */
+  export const TaskStatus = {
+    PENDING: 0,   // 待办
+    DONE: 1,      // 已完成
+    OVERDUE: 2,   // 已逾期
+  } as const;
 
+  /** 任务优先级 */
+  export const TaskPriority = {
+    HIGH: 1,    // 高
+    MEDIUM: 2,  // 中
+    LOW: 3,     // 低
+  } as const;
+
+  // ===================== 类型 =====================
+
+  /** 客户实体 */
   export interface Customer {
     id: number;
     name: string;
@@ -44,6 +70,7 @@ export namespace CrmApi {
     createdTime: string;
   }
 
+  /** 客户分页查询 */
   export interface CustomerPageQuery extends PageParams {
     name?: string;
     level?: number;
@@ -51,7 +78,9 @@ export namespace CrmApi {
     assigneeId?: number;
   }
 
+  /** 客户保存 DTO */
   export interface CustomerSaveDTO {
+    id?: number;
     name: string;
     mobile?: string;
     company?: string;
@@ -62,8 +91,7 @@ export namespace CrmApi {
     remark?: string;
   }
 
-  // ===== 跟进记录 =====
-
+  /** 跟进记录 */
   export interface Followup {
     id: number;
     customerId: number;
@@ -75,6 +103,7 @@ export namespace CrmApi {
     createdTime: string;
   }
 
+  /** 跟进保存 DTO */
   export interface FollowupSaveDTO {
     customerId: number;
     followupType: number;
@@ -83,12 +112,11 @@ export namespace CrmApi {
     nextFollowupAt?: string;
   }
 
-  // ===== 跟进任务 =====
-
+  /** 跟进任务 */
   export interface FollowupTask {
     id: number;
     customerId: number;
-    taskType: string;
+    taskType?: string;
     title: string;
     content?: string;
     dueAt: string;
@@ -99,6 +127,7 @@ export namespace CrmApi {
     createdTime: string;
   }
 
+  /** 任务分页查询 */
   export interface TaskPageQuery extends PageParams {
     customerId?: number;
     assigneeId?: number;
@@ -106,7 +135,9 @@ export namespace CrmApi {
     priority?: number;
   }
 
+  /** 任务保存 DTO */
   export interface TaskSaveDTO {
+    id?: number;
     customerId: number;
     taskType?: string;
     title: string;
@@ -115,7 +146,20 @@ export namespace CrmApi {
     priority?: number;
     assigneeId?: number;
   }
+
+  /** 客户统计 */
+  export interface CustomerStats {
+    total: number;
+    potential: number;
+    intent: number;
+    deal: number;
+    lost: number;
+    pendingTask: number;
+    overdueTask: number;
+  }
 }
+
+// ===================== API 方法 =====================
 
 /** 客户分页查询 */
 export async function pageCustomersApi(query: CrmApi.CustomerPageQuery) {
@@ -144,7 +188,12 @@ export async function deleteCustomerApi(id: number) {
 
 /** 客户统计 */
 export async function customerStatsApi() {
-  return requestClient.get<any>('/crm/customer/stats');
+  return requestClient.get<CrmApi.CustomerStats>('/crm/customer/stats');
+}
+
+/** 跟进记录列表 */
+export async function listFollowupsApi(customerId: number) {
+  return requestClient.get<CrmApi.Followup[]>(`/crm/followup/list?customerId=${customerId}`);
 }
 
 /** 添加跟进记录 */
@@ -152,11 +201,9 @@ export async function addFollowupApi(data: CrmApi.FollowupSaveDTO) {
   return requestClient.post<number>('/crm/followup', data);
 }
 
-/** 跟进记录列表 */
-export async function listFollowupsApi(customerId: number) {
-  return requestClient.get<CrmApi.Followup[]>('/crm/followup/list', {
-    params: { customerId },
-  });
+/** 任务分页查询 */
+export async function pageTasksApi(query: CrmApi.TaskPageQuery) {
+  return requestClient.get<PageResult<CrmApi.FollowupTask>>('/crm/task/page', { params: query });
 }
 
 /** 创建跟进任务 */
@@ -169,12 +216,7 @@ export async function completeTaskApi(id: number) {
   return requestClient.post(`/crm/task/${id}/complete`);
 }
 
-/** 我的待办任务列表 */
+/** 我的待办列表 */
 export async function pendingTasksApi() {
   return requestClient.get<CrmApi.FollowupTask[]>('/crm/task/pending');
-}
-
-/** 任务分页查询 */
-export async function pageTasksApi(query: CrmApi.TaskPageQuery) {
-  return requestClient.get<PageResult<CrmApi.FollowupTask>>('/crm/task/page', { params: query });
 }
