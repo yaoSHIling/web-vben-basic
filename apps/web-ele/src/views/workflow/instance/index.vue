@@ -1,393 +1,206 @@
 <template>
-  <div>
-    <!-- 切换 Tab -->
-    <el-tabs v-model="activeTab" class="mb-4">
-      <el-tab-pane label="\ud83d\udccb 我的待办" name="pending">
-        <span>待审批 <el-badge :value="pendingTotal" /></span>
-      </el-tab-pane>
-      <el-tab-pane label="\ud83d\udcdd 我的申请" name="mine" />
-    </el-tabs>
+  <div class="p-4">
+    <el-card>
+      <template #header>
+        <div class="flex justify-between items-center">
+          <span class="font-medium">工作流执行记录</span>
+          <el-button size="small" @click="loadData">
+            <icon-refresh /> 刷新
+          </el-button>
+        </div>
+      </template>
 
-    <!-- ==================== 我的待办 ==================== -->
-    <div v-if="activeTab === 'pending'">
       <!-- 筛选 -->
-      <div class="mb-4">
-        <el-form inline :model="pendingQuery" label-width="80">
-          <el-form-item label="流程标题">
-            <el-input v-model="pendingQuery.title" placeholder="搜索标题" clearable @keyup.enter="loadPending" />
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="loadPending">
-              <icon-search class="mr-1" />搜索
-            </el-button>
-            <el-button @click="pendingQuery.title = ''; loadPending()">重置</el-button>
-          </el-form-item>
-        </el-form>
+      <div class="mb-4 flex gap-3 items-center flex-wrap">
+        <el-select v-model="query.status" placeholder="执行状态" clearable size="small" @change="loadData">
+          <el-option label="运行中" :value="0" />
+          <el-option label="成功" :value="1" />
+          <el-option label="失败" :value="2" />
+          <el-option label="暂停" :value="3" />
+        </el-select>
+        <el-input v-model="query.keyword" placeholder="工作流名称" size="small" clearable
+          style="width: 200px" @change="loadData" />
+        <el-button type="primary" size="small" @click="loadData">
+          <icon-search /> 搜索
+        </el-button>
       </div>
 
-      <!-- 待办列表 -->
-      <div v-loading="pendingLoading">
-        <el-empty v-if="pendingList.length === 0" description="暂无待审批任务" />
-
-        <el-card
-          v-for="task in pendingList"
-          :key="task.id"
-          class="task-card mb-3"
-          shadow="hover"
-        >
-          <div class="flex justify-between items-start">
-            <!-- 左侧信息 -->
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-2">
-                <el-tag type="warning" size="small">待审批</el-tag>
-                <span class="text-sm text-gray-400">|</span>
-                <span class="task-title">{{ task.instanceTitle || task.nodeName }}</span>
-              </div>
-              <div class="text-sm text-gray-500 mb-1">
-                节点：<b>{{ task.nodeName }}</b>
-              </div>
-              <div class="text-xs text-gray-400">
-                申请人：{{ task.initiatorName }} &nbsp;|&nbsp;
-                提交时间：{{ formatDate(task.createdTime) }}
-              </div>
-              <!-- 表单数据预览 -->
-              <div v-if="task.formData" class="mt-2 p-2 bg-gray-50 rounded text-xs">
-                <span class="text-gray-500">表单数据：</span>
-                <pre class="mt-1 text-gray-600">{{ JSON.stringify(task.formData, null, 2) }}</pre>
-              </div>
-            </div>
-
-            <!-- 右侧操作 -->
-            <div class="flex gap-2 ml-4">
-              <el-button type="primary" size="small" @click="openApproveDialog(task)">
-                审批
-              </el-button>
-            </div>
-          </div>
-        </el-card>
-      </div>
-
-      <!-- 分页 -->
-      <div v-if="pendingTotal > 0" class="mt-4 flex justify-end">
-        <el-pagination
-          v-model:page="pendingQuery.page"
-          v-model:page-size="pendingQuery.pageSize"
-          :total="pendingTotal"
-          :page-sizes="[10, 20, 50]"
-          layout="total, sizes, prev, pager, next"
-          @pagination="loadPending"
-        />
-      </div>
-    </div>
-
-    <!-- ==================== 我的申请 ==================== -->
-    <div v-if="activeTab === 'mine'">
-      <div class="mb-4">
-        <el-form inline :model="mineQuery" label-width="80">
-          <el-form-item label="流程状态">
-            <el-select v-model="mineQuery.status" placeholder="全部" clearable @change="loadMine">
-              <el-option label="审批中" :value="0" />
-              <el-option label="已通过" :value="1" />
-              <el-option label="已拒绝" :value="2" />
-              <el-option label="已撤回" :value="3" />
-            </el-select>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="loadMine">
-              <icon-search class="mr-1" />搜索
-            </el-button>
-            <el-button @click="mineQuery.status = undefined; loadMine()">重置</el-button>
-          </el-form-item>
-        </el-form>
-      </div>
-
-      <el-table :data="mineList" stripe v-loading="mineLoading">
+      <!-- 列表 -->
+      <el-table :data="list" stripe v-loading="loading" @row-click="openDetail">
         <el-table-column type="index" label="序号" width="60" align="center" />
-        <el-table-column prop="title" label="流程标题" min-width="200" />
-        <el-table-column prop="definitionCode" label="工作流" width="150" />
-        <el-table-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="definitionCode" label="工作流" width="180" />
+        <el-table-column prop="status" label="状态" width="90" align="center">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <el-tag :type="statusTagType(row.status)" size="small">
+              {{ statusLabel(row.status) }}
+            </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="startedAt" label="申请时间" width="160" />
-        <el-table-column prop="finishedAt" label="结束时间" width="160" />
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column prop="inputData" label="输入" min-width="200">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="viewInstance(row)">详情</el-button>
-            <el-button
-              v-if="row.status === 0"
-              link
-              type="warning"
-              size="small"
-              @click="handleRevoke(row)"
-            >
-              撤回
+            <span class="text-xs ellipsis-2">{{ formatJson(row.inputData) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="outputData" label="输出" min-width="200">
+          <template #default="{ row }">
+            <span class="text-xs ellipsis-2">{{ formatJson(row.outputData) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="startedAt" label="开始时间" width="160" />
+        <el-table-column prop="finishedAt" label="结束时间" width="160" />
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click.stop="openLogs(row)">
+              执行日志
             </el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <div v-if="mineTotal > 0" class="mt-4 flex justify-end">
+      <div class="mt-4 flex justify-end">
         <el-pagination
-          v-model:page="mineQuery.page"
-          v-model:page-size="mineQuery.pageSize"
-          :total="mineTotal"
+          v-model:page="query.page"
+          v-model:page-size="query.pageSize"
+          :total="total"
           :page-sizes="[10, 20, 50]"
           layout="total, sizes, prev, pager, next"
-          @pagination="loadMine"
+          @pagination="loadData"
         />
       </div>
-    </div>
+    </el-card>
 
-    <!-- ==================== 审批弹窗 ==================== -->
-    <el-dialog v-model="approveDialogVisible" title="审批" width="500px" destroy-on-close>
-      <div v-if="currentTask" class="mb-4 el-alert el-alert--info is-light">
-        <b>{{ currentTask.instanceTitle }}</b>
-        <div class="text-sm mt-1">节点：{{ currentTask.nodeName }}</div>
-        <div v-if="currentTask.formData" class="mt-2 text-xs">
-          表单数据：<pre class="mt-1">{{ JSON.stringify(currentTask.formData, null, 2) }}</pre>
-        </div>
-      </div>
-
-      <el-form ref="approveFormRef" :model="approveForm" label-width="80">
-        <el-form-item label="审批意见" prop="opinion">
-          <el-input
-            v-model="approveForm.opinion"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入审批意见（选填）"
-          />
-        </el-form-item>
-        <el-form-item label="操作" prop="action" required>
-          <el-radio-group v-model="approveForm.action">
-            <el-radio label="agree">\u2705 同意</el-radio>
-            <el-radio label="reject">\u274c 拒绝</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <el-button @click="approveDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleApprove">
-          提交审批
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- ==================== 详情弹窗 ==================== -->
-    <el-dialog v-model="detailVisible" title="流程详情" width="700px" destroy-on-close>
+    <!-- 执行日志抽屉 -->
+    <el-drawer v-model="logDrawerVisible" title="执行日志" size="60%">
       <div v-if="currentInstance">
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="流程标题">{{ currentInstance.title }}</el-descriptions-item>
+        <el-descriptions :column="2" border size="small" class="mb-4">
+          <el-descriptions-item label="工作流">{{ currentInstance.definitionCode }}</el-descriptions-item>
           <el-descriptions-item label="状态">
-            <el-tag :type="statusTagType(currentInstance.status)">
+            <el-tag :type="statusTagType(currentInstance.status)" size="small">
               {{ statusLabel(currentInstance.status) }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="工作流">{{ currentInstance.definitionCode }}</el-descriptions-item>
-          <el-descriptions-item label="申请时间">{{ currentInstance.startedAt }}</el-descriptions-item>
+          <el-descriptions-item label="开始时间">{{ currentInstance.startedAt }}</el-descriptions-item>
           <el-descriptions-item label="结束时间">{{ currentInstance.finishedAt || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="表单数据" :span="2">
-            <pre class="text-xs">{{ JSON.stringify(currentInstance.formData, null, 2) }}</pre>
+          <el-descriptions-item label="当前节点" :span="2">{{ currentInstance.currentNodeId || '-' }}</el-descriptions-item>
+          <el-descriptions-item v-if="currentInstance.errorMsg" label="错误" :span="2">
+            <span class="text-red-500">{{ currentInstance.errorMsg }}</span>
           </el-descriptions-item>
         </el-descriptions>
 
-        <el-divider content-position="left">审批历史</el-divider>
-
+        <!-- 日志时间线 -->
         <el-timeline>
           <el-timeline-item
-            v-for="h in instanceHistory"
-            :key="h.id"
-            :timestamp="formatDate(h.operatedAt)"
+            v-for="log in logs"
+            :key="log.id"
+            :timestamp="`${log.startedAt} (${log.elapsedMs}ms)`"
             placement="top"
+            :type="logStatusColor(log.status)"
           >
-            <el-card shadow="never" class="history-card">
+            <el-card shadow="never" class="log-card">
               <div class="flex justify-between">
-                <div>
-                  <b>{{ h.operatorName }}</b>
-                  <el-tag
-                    size="small"
-                    :type="actionTagType(h.action)"
-                    class="ml-2"
-                  >
-                    {{ actionLabel(h.action) }}
+                <div class="flex items-center gap-2">
+                  <span class="node-icon-sm">{{ nodeIcon(log.nodeType) }}</span>
+                  <b>{{ log.nodeName }}</b>
+                  <el-tag size="small" :type="logStatusColor(log.status)">
+                    {{ logStatusLabel(log.status) }}
                   </el-tag>
                 </div>
-                <div class="text-xs text-gray-400">{{ h.nodeName }}</div>
+                <span class="text-xs text-gray-400">{{ log.nodeType }}</span>
               </div>
-              <div v-if="h.opinion" class="text-sm text-gray-500 mt-1">
-                意见：{{ h.opinion }}
+              <div v-if="log.errorMsg" class="text-red-500 text-xs mt-1">
+                错误：{{ log.errorMsg }}
+              </div>
+              <div v-if="log.outputData" class="mt-1">
+                <pre class="text-xs bg-gray-50 p-2 rounded mt-1 overflow-auto max-h-40">
+{{ formatJson(log.outputData) }}</pre>
               </div>
             </el-card>
           </el-timeline-item>
         </el-timeline>
       </div>
-
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-      </template>
-    </el-dialog>
+    </el-drawer>
   </div>
 </template>
 
-<script setup lang="ts" name="WorkflowMyTasks">
+<script setup lang="ts" name="WorkflowInstancePage">
 import { ref, reactive, onMounted } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import {
-  myTasksApi,
-  myInstancesApi,
-  approveTaskApi,
-  revokeWorkflowApi,
-  getInstanceApi,
-  getInstanceHistoryApi,
-} from '#/api/modules/workflow';
+import { ElMessage } from 'element-plus';
+import { workflowInstanceApi } from '#/api/modules/workflow';
 
-definePage({ meta: { title: '我的审批', icon: 'lucide:clipboard-check' } });
+definePage({ meta: { title: '执行记录', icon: 'lucide:history' } });
 
-// ===================== 状态 =====================
-const activeTab = ref('pending');
+const loading = ref(false);
+const list = ref<any[]>([]);
+const total = ref(0);
+const query = reactive({ page: 1, pageSize: 10, status: undefined as number | undefined, keyword: '' });
 
-// ===================== 我的待办 =====================
-const pendingLoading = ref(false);
-const pendingList = ref<any[]>([]);
-const pendingTotal = ref(0);
-const pendingQuery = reactive({ page: 1, pageSize: 10, title: '' });
-
-async function loadPending() {
-  pendingLoading.value = true;
-  try {
-    const res = await myTasksApi(pendingQuery);
-    pendingList.value = res.list;
-    pendingTotal.value = res.total;
-  } catch {
-    ElMessage.error('加载待办列表失败');
-  } finally {
-    pendingLoading.value = false;
-  }
-}
-
-// ===================== 我的申请 =====================
-const mineLoading = ref(false);
-const mineList = ref<any[]>([]);
-const mineTotal = ref(0);
-const mineQuery = reactive({ page: 1, pageSize: 10, status: undefined as number | undefined });
-
-async function loadMine() {
-  mineLoading.value = true;
-  try {
-    const res = await myInstancesApi(mineQuery);
-    mineList.value = res.list;
-    mineTotal.value = res.total;
-  } catch {
-    ElMessage.error('加载申请列表失败');
-  } finally {
-    mineLoading.value = false;
-  }
-}
-
-// ===================== 审批弹窗 =====================
-const approveDialogVisible = ref(false);
-const submitLoading = ref(false);
-const approveFormRef = ref();
-const currentTask = ref<any>(null);
-const approveForm = reactive({ action: 'agree', opinion: '' });
-
-function openApproveDialog(task: any) {
-  currentTask.value = task;
-  approveForm.action = 'agree';
-  approveForm.opinion = '';
-  approveDialogVisible.value = true;
-}
-
-async function handleApprove() {
-  if (!approveForm.action) {
-    ElMessage.warning('请选择审批操作');
-    return;
-  }
-
-  submitLoading.value = true;
-  try {
-    await approveTaskApi({
-      taskId: currentTask.value.id,
-      action: approveForm.action,
-      opinion: approveForm.opinion,
-    });
-    ElMessage.success(approveForm.action === 'agree' ? '已同意' : '已拒绝');
-    approveDialogVisible.value = false;
-    loadPending();
-    loadMine();
-  } catch {
-    ElMessage.error('审批失败');
-  } finally {
-    submitLoading.value = false;
-  }
-}
-
-// ===================== 详情/撤回 =====================
-const detailVisible = ref(false);
+const logDrawerVisible = ref(false);
 const currentInstance = ref<any>(null);
-const instanceHistory = ref<any[]>([]);
+const logs = ref<any[]>([]);
 
-async function viewInstance(row: any) {
+const nodeIcons: Record<string, string> = {
+  start: '\ud83d\udd28', end: '\u2705', llm: '\ud83e\udde0', code: '\ud83d\udcbb',
+  condition: '\ud83d\udd22', approval: '\ud83d\udcbc', http: '\ud83d\udcce',
+  variable: '\u2699\ufe0f', loop: '\ud83d\udd01', subflow: '\ud83d\udcda',
+  message: '\ud83d\udce7', database: '\ud83d\udcbe',
+};
+
+async function loadData() {
+  loading.value = true;
   try {
-    const [instance, history] = await Promise.all([
-      getInstanceApi(row.id),
-      getInstanceHistoryApi(row.id),
-    ]);
-    currentInstance.value = instance;
-    instanceHistory.value = history;
-    detailVisible.value = true;
+    const res = await workflowInstanceApi.my(query);
+    list.value = res.list;
+    total.value = res.total;
   } catch {
-    ElMessage.error('加载详情失败');
+    ElMessage.error('加载失败');
+  } finally {
+    loading.value = false;
   }
 }
 
-async function handleRevoke(row: any) {
-  await ElMessageBox.confirm('确定撤回该申请吗？', '撤回确认', { type: 'warning' });
+async function openDetail(row: any) {
+  currentInstance.value = row;
+  logDrawerVisible.value = true;
   try {
-    await revokeWorkflowApi({ instanceId: row.id });
-    ElMessage.success('撤回成功');
-    loadMine();
+    logs.value = await workflowInstanceApi.logs(row.id);
   } catch {
-    ElMessage.error('撤回失败');
+    ElMessage.error('加载日志失败');
   }
 }
 
-// ===================== 辅助函数 =====================
+function openLogs(row: any) {
+  openDetail(row);
+}
+
 function statusLabel(v?: number) {
-  return { 0: '审批中', 1: '已通过', 2: '已拒绝', 3: '已撤回' }[v || 0] || '未知';
+  return { 0: '运行中', 1: '成功', 2: '失败', 3: '暂停' }[v || 0] || '未知';
 }
 function statusTagType(v?: number) {
-  return { 0: 'warning', 1: 'success', 2: 'danger', 3: 'info' }[v || 0] || 'info';
+  return { 0: 'primary', 1: 'success', 2: 'danger', 3: 'warning' }[v || 0] || 'info';
 }
-function actionLabel(v?: string) {
-  return { submit: '提交', agree: '同意', reject: '拒绝', transfer: '转交', revoke: '撤回' }[v || ''] || v;
+function logStatusLabel(v?: number) {
+  return { 0: '等待', 1: '运行中', 2: '成功', 3: '失败' }[v || 0] || '';
 }
-function actionTagType(v?: string) {
-  return { submit: 'primary', agree: 'success', reject: 'danger', transfer: 'warning', revoke: 'info' }[v || ''] || 'info';
+function logStatusColor(v?: number) {
+  return { 0: 'info', 1: 'primary', 2: 'success', 3: 'danger' }[v || 0] || 'info';
 }
-function formatDate(d?: string) {
-  if (!d) return '-';
-  return d.slice(0, 16).replace('T', ' ');
+function nodeIcon(type?: string) { return nodeIcons[type || ''] || '\u25cf'; }
+function formatJson(str?: string) {
+  if (!str) return '-';
+  try { return JSON.stringify(JSON.parse(str), null, 2).slice(0, 100); }
+  catch { return str; }
 }
 
-// ===================== 初始化 =====================
-onMounted(() => {
-  loadPending();
-  loadMine();
-});
+onMounted(loadData);
 </script>
 
 <style scoped>
-.task-card {
-  border-left: 3px solid var(--el-color-warning);
-}
-.task-title {
-  font-weight: 500;
-  font-size: 14px;
-}
-.history-card {
-  padding: 8px 12px;
+.log-card { padding: 8px 12px; }
+.node-icon-sm { font-size: 14px; }
+.ellipsis-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>

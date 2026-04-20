@@ -1,9 +1,102 @@
-import type { PageResult, PageParams } from '#/types';
+import type { PageResult } from '#/types';
 import { requestClient } from '#/api/request';
 
 export namespace WorkflowApi {
 
-  // ===== 工作流定义 =====
+  // ===== 节点类型（与 Coze 对齐）=====
+  // start / end / llm / code / condition / approval / http /
+  // variable / loop / subflow / message / database
+
+  export interface WfGraph {
+    nodes: WfNode[];
+    edges: WfEdge[];
+  }
+
+  export interface WfNode {
+    id: string;
+    type: NodeType;
+    position: { x: number; y: number };
+    data: WfNodeData;
+  }
+
+  export type NodeType =
+    | 'start' | 'end'
+    | 'llm' | 'code' | 'condition'
+    | 'approval' | 'http' | 'variable'
+    | 'loop' | 'subflow' | 'message' | 'database';
+
+  export interface WfNodeData {
+    name: string;
+
+    // LLM 节点
+    model?: string;
+    prompt?: string;
+    systemPrompt?: string;
+
+    // Code 节点
+    language?: 'javascript' | 'python';
+    code?: string;
+
+    // Condition 节点
+    branches?: WfBranch[];
+    defaultBranch?: WfBranch;
+
+    // Approval 节点
+    assigneeType?: number;     // 1=指定人 2=角色 3=自选
+    assigneeExpr?: string;     // user:123 / role:manager / ${initiator}
+    assigneeIds?: string;
+    titleTemplate?: string;
+    contentTemplate?: string;
+
+    // HTTP 节点
+    url?: string;
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    headers?: Record<string, string>;
+    body?: any;
+
+    // Variable 节点
+    variableName?: string;
+    variableType?: 'String' | 'Number' | 'Boolean' | 'Object' | 'Array';
+    variableValue?: any;
+    isList?: boolean;
+
+    // Loop 节点
+    loopType?: 'for' | 'while' | 'forEach';
+    loopTimes?: number;
+    loopArray?: string;
+    maxLoopTimes?: number;
+
+    // Subflow 节点
+    subflowCode?: string;
+    subflowInput?: Record<string, any>;
+
+    // Message 节点
+    channel?: 'weixin' | 'email' | 'dingtalk' | 'webhook' | 'serverchan';
+    toUser?: string;
+    title?: string;
+    content?: string;
+
+    // Database 节点
+    sql?: string;
+    datasource?: string;
+    isSelect?: boolean;
+  }
+
+  export interface WfBranch {
+    id: string;
+    name: string;
+    conditionExpr: string;    // 如：amount > 1000
+    targetNodeId: string;
+  }
+
+  export interface WfEdge {
+    id: string;
+    source: string;
+    target: string;
+    data?: { label?: string };
+  }
+
+  // ===== Definition =====
   export interface WfDefinition {
     id: number;
     name: string;
@@ -11,170 +104,76 @@ export namespace WorkflowApi {
     description?: string;
     version: number;
     status: number;
-    formCode?: string;
-    config?: WfDefinitionConfig;
+    graphData?: WfGraph;
+    variables?: Record<string, any>;
     createdBy: number;
     createdTime: string;
   }
 
-  // ===== 流程配置 =====
-  export interface WfDefinitionConfig {
-    nodes:WfNode[];
-    edges: WfEdge[];
-  }
-
-  export interface WfNode {
-    id: string;
-    type: 'start' | 'approver' | 'condition' | 'end' | 'auto';
-    data: WfNodeData;
-    x?: number;
-    y?: number;
-  }
-
-  export interface WfNodeData {
-    name: string;
-    assigneeType?: number;   // 1=指定人 2=角色 3=发起人自选
-    assigneeExpr?: string;   // user:123 / role:manager / ${initiator}
-    sequence?: number;
-    conditions?: WfCondition[];
-    defaultNodeId?: string;
-  }
-
-  export interface WfCondition {
-    expr: string;      // 条件表达式：amount > 1000
-    targetNodeId: string;
-    label?: string;
-  }
-
-  export interface WfEdge {
-    source: string;
-    target: string;
-    conditionExpr?: string;
-    label?: string;
-  }
-
-  // ===== 工作流实例 =====
+  // ===== Instance =====
   export interface WfInstance {
     id: number;
     definitionId: number;
     definitionCode: string;
-    businessId?: string;
-    businessType?: string;
-    title: string;
     status: number;
-    formData?: any;
+    inputData?: any;
+    outputData?: any;
+    errorMsg?: string;
     currentNodeId?: string;
     initiatorId: number;
     startedAt: string;
     finishedAt?: string;
   }
 
-  // ===== 审批任务 =====
-  export interface WfTask {
+  // ===== Instance Log =====
+  export interface WfInstanceLog {
     id: number;
     instanceId: number;
     nodeId: string;
     nodeName: string;
-    assigneeId: number;
-    assigneeName: string;
-    assigneeType: number;
-    assigneeExpr?: string;
+    nodeType: string;
     status: number;
-    opinion?: string;
-    action?: string;
-    operatedAt?: string;
-    operatorId?: number;
-    sequence: number;
-    createdTime: string;
-  }
-
-  // ===== 审批历史 =====
-  export interface WfTaskHistory {
-    id: number;
-    taskId?: number;
-    instanceId: number;
-    nodeId: string;
-    nodeName: string;
-    operatorId: number;
-    operatorName: string;
-    action: string;
-    opinion?: string;
-    operatedAt: string;
+    inputData?: any;
+    outputData?: any;
+    errorMsg?: string;
+    startedAt: string;
+    finishedAt?: string;
+    elapsedMs?: number;
   }
 }
 
-// ===== API 方法 =====
+// ==================== API 方法 ====================
 
-// --- 定义管理 ---
-export function pageDefinitionsApi(params: any) {
-  return requestClient.get<PageResult<WorkflowApi.WfDefinition>>(
-    '/workflow/definition/page',
-    { params }
-  );
-}
+export const workflowDefinitionApi = {
+  page: (params: any) =>
+    requestClient.get<PageResult<WorkflowApi.WfDefinition>>('/workflow/definition/page', { params }),
 
-export function getDefinitionApi(id: number) {
-  return requestClient.get<WorkflowApi.WfDefinition>(`/workflow/definition/${id}`);
-}
+  get: (id: number) =>
+    requestClient.get<WorkflowApi.WfDefinition>(`/workflow/definition/${id}`),
 
-export function saveDefinitionApi(data: any) {
-  return requestClient.post<number>('/workflow/definition', data);
-}
+  save: (data: any) =>
+    requestClient.post<number>('/workflow/definition', data),
 
-export function publishDefinitionApi(id: number) {
-  return requestClient.post(`/workflow/definition/${id}/publish`);
-}
+  publish: (id: number) =>
+    requestClient.post(`/workflow/definition/${id}/publish`),
 
-export function disableDefinitionApi(id: number) {
-  return requestClient.post(`/workflow/definition/${id}/disable`);
-}
+  disable: (id: number) =>
+    requestClient.post(`/workflow/definition/${id}/disable`),
 
-// --- 流程操作 ---
-export function submitWorkflowApi(data: {
-  definitionCode: string;
-  businessId?: string;
-  businessType?: string;
-  title: string;
-  formData?: any;
-  assigneeId?: number;
-}) {
-  return requestClient.post<number>('/workflow/submit', data);
-}
+  delete: (id: number) =>
+    requestClient.delete(`/workflow/definition/${id}`),
+};
 
-export function approveTaskApi(data: {
-  taskId: number;
-  action: 'agree' | 'reject' | 'transfer';
-  opinion?: string;
-  transferTo?: number;
-}) {
-  return requestClient.post('/workflow/task/approve', data);
-}
+export const workflowInstanceApi = {
+  trigger: (definitionCode: string, data: any) =>
+    requestClient.post<number>(`/workflow/trigger/${definitionCode}`, { data }),
 
-export function revokeWorkflowApi(data: { instanceId: number; opinion?: string }) {
-  return requestClient.post('/workflow/instance/revoke', data);
-}
+  get: (id: number) =>
+    requestClient.get<WorkflowApi.WfInstance>(`/workflow/instance/${id}`),
 
-// --- 查询 ---
-export function myTasksApi(params: any) {
-  return requestClient.get<PageResult<WorkflowApi.WfTask>>(
-    '/workflow/task/my',
-    { params }
-  );
-}
+  logs: (id: number) =>
+    requestClient.get<WorkflowApi.WfInstanceLog[]>(`/workflow/instance/${id}/logs`),
 
-export function myInstancesApi(params: any) {
-  return requestClient.get<PageResult<WorkflowApi.WfInstance>>(
-    '/workflow/instance/my',
-    { params }
-  );
-}
-
-export function getInstanceApi(id: number) {
-  return requestClient.get<WorkflowApi.WfInstance>(`/workflow/instance/${id}`);
-}
-
-export function getInstanceHistoryApi(id: number) {
-  return requestClient.get<WorkflowApi.WfTaskHistory[]>(
-    `/workflow/instance/${id}/history`
-  );
-}
+  my: (params: any) =>
+    requestClient.get<PageResult<WorkflowApi.WfInstance>>('/workflow/instance/my', { params }),
+};

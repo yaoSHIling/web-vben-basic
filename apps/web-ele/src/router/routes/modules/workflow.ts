@@ -1,19 +1,16 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-/**
- * 工作流模块路由
- */
 const routes: RouteRecordRaw[] = [
   {
     path: '/workflow',
     name: 'Workflow',
-    meta: { title: '工作流管理', icon: 'lucide:git-branch', order: 20 },
+    meta: { title: '工作流引擎', icon: 'lucide:git-branch', order: 20 },
     children: [
       {
-        name: 'WorkflowDesigner',
+        name: 'WorkflowDesignerNew',
         path: '/workflow/designer',
         component: () => import('#/views/workflow/designer/index.vue'),
-        meta: { title: '工作流设计器' },
+        meta: { title: '创建工作流' },
       },
       {
         name: 'WorkflowDesignerEdit',
@@ -22,10 +19,10 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '编辑工作流', hide: true },
       },
       {
-        name: 'WorkflowMyTasks',
-        path: '/workflow/my',
+        name: 'WorkflowInstance',
+        path: '/workflow/instance',
         component: () => import('#/views/workflow/instance/index.vue'),
-        meta: { title: '我的审批' },
+        meta: { title: '执行记录' },
       },
     ],
   },
