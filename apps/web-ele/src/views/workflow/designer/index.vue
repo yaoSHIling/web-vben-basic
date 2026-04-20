@@ -124,6 +124,7 @@
 <script setup lang="ts" name="WorkflowDesignerPage">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useRoute, useRouter } from 'vue-router';
 import WorkflowCanvas from './WorkflowCanvas.vue';
 import WorkflowSetter from './WorkflowSetter.vue';
 import { workflowDefinitionApi } from '#/api/modules/workflow';
@@ -131,10 +132,13 @@ import { workflowDefinitionApi } from '#/api/modules/workflow';
 definePage({ meta: { title: '工作流设计器', icon: 'lucide:git-branch' } });
 
 const props = defineProps<{ id?: string }>();
+const route = useRoute();
+const router = useRouter();
+const routeId = computed(() => (props.id ?? route.params.id) as string | undefined);
 
 // ==================== 状态 ====================
 const definition = ref<any>(null);
-const isEdit = computed(() => !!props.id);
+const isEdit = computed(() => !!routeId.value);
 const isSaved = ref(true);
 const saveDialogVisible = ref(false);
 const previewVisible = ref(false);
@@ -241,6 +245,72 @@ function createNode(type: string, x: number, y: number) {
   };
 }
 
+function hydrateNodes(rawNodes: any[] = []) {
+  return rawNodes.map((node) => {
+    const nextNode = {
+      ...node,
+      data: {
+        ...(node.data || {}),
+      },
+    };
+
+    if (nextNode.type === 'http') {
+      nextNode.data.bodyStr = nextNode.data.body
+        ? JSON.stringify(nextNode.data.body, null, 2)
+        : '';
+    }
+
+    if (nextNode.type === 'condition' && !nextNode.data.defaultBranch) {
+      nextNode.data.defaultBranch = { targetNodeId: '' };
+    }
+
+    return nextNode;
+  });
+}
+
+function serializeNodes(rawNodes: any[] = []) {
+  return rawNodes.map((node) => {
+    const nextNode = {
+      ...node,
+      data: {
+        ...(node.data || {}),
+      },
+    };
+
+    if (nextNode.type === 'http') {
+      const bodyStr = nextNode.data.bodyStr?.trim();
+      if (!bodyStr) {
+        nextNode.data.body = {};
+      } else {
+        try {
+          nextNode.data.body = JSON.parse(bodyStr);
+        } catch {
+          throw new Error(`HTTP 节点「${nextNode.data.name || nextNode.id}」Body 不是合法 JSON`);
+        }
+      }
+      delete nextNode.data.bodyStr;
+    }
+
+    return nextNode;
+  });
+}
+
+function validateBeforeSave() {
+  const startCount = nodes.value.filter((n) => n.type === 'start').length;
+  const endCount = nodes.value.filter((n) => n.type === 'end').length;
+
+  if (startCount !== 1) {
+    ElMessage.warning('工作流必须且只能有一个开始节点');
+    return false;
+  }
+  if (endCount < 1) {
+    ElMessage.warning('工作流至少需要一个结束节点');
+    return false;
+  }
+
+  return true;
+}
+
 function getDefaultNodeData(type: string): any {
   switch (type) {
     case 'llm': return { model: 'MiniMax-M*', prompt: '', systemPrompt: '' };
@@ -304,6 +374,9 @@ function handlePreview() {
 
 // ==================== 保存 ====================
 function handleSave() {
+  if (!validateBeforeSave()) {
+    return;
+  }
   if (!saveForm.name) {
     saveDialogVisible.value = true;
     return;
@@ -314,17 +387,18 @@ function handleSave() {
 async function confirmSave() {
   saveLoading.value = true;
   try {
+    const serializedNodes = serializeNodes(nodes.value);
     const data = {
-      id: isEdit.value ? Number(props.id) : undefined,
+      id: isEdit.value ? Number(routeId.value) : undefined,
       name: saveForm.name,
       code: saveForm.code,
       description: saveForm.description,
-      graphData: { nodes: nodes.value, edges: edges.value },
+      graphData: { nodes: serializedNodes, edges: edges.value },
     };
     const id = await workflowDefinitionApi.save(data);
     if (!isEdit.value) {
       // 跳转到编辑页
-      history.replaceState(null, '', `/workflow/designer/${id}`);
+      await router.replace(`/workflow/designer/${id}`);
     }
     ElMessage.success('保存成功');
     saveDialogVisible.value = false;
@@ -339,7 +413,7 @@ async function confirmSave() {
 async function handlePublish() {
   await ElMessageBox.confirm('发布后即可使用，确定发布？', '提示', { type: 'info' });
   try {
-    await workflowDefinitionApi.publish(Number(props.id));
+    await workflowDefinitionApi.publish(Number(routeId.value));
     definition.value.status = 1;
     ElMessage.success('发布成功');
   } catch {
@@ -349,7 +423,7 @@ async function handlePublish() {
 
 async function handleDisable() {
   try {
-    await workflowDefinitionApi.disable(Number(props.id));
+    await workflowDefinitionApi.disable(Number(routeId.value));
     definition.value.status = 2;
     ElMessage.success('已禁用');
   } catch {
@@ -361,9 +435,9 @@ async function handleDisable() {
 onMounted(async () => {
   if (isEdit.value) {
     try {
-      const def = await workflowDefinitionApi.get(Number(props.id));
+      const def = await workflowDefinitionApi.get(Number(routeId.value));
       definition.value = def;
-      nodes.value = def.graphData?.nodes || [];
+      nodes.value = hydrateNodes(def.graphData?.nodes || []);
       edges.value = def.graphData?.edges || [];
       Object.assign(saveForm, {
         name: def.name,

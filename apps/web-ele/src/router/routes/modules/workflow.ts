@@ -15,6 +15,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'WorkflowDesignerEdit',
         path: '/workflow/designer/:id',
+        props: true,
         component: () => import('#/views/workflow/designer/index.vue'),
         meta: { title: '编辑工作流', hide: true },
       },

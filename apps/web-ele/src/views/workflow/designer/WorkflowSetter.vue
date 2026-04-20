@@ -6,7 +6,7 @@
         {{ node.data?.name || node.id }}
       </span>
       <el-tag size="small" :type="tagType(node.type)">{{ node.type }}</el-tag>
-      <el-button link class="wf-setter__close" @click="$emit('update:node', null)">
+      <el-button link class="wf-setter__close" @click="emit('update:node', null)">
         <icon-x />
       </el-button>
     </div>
@@ -45,7 +45,7 @@
             <el-form-item label="提示词模板">
               <el-input v-model="node.data.prompt" type="textarea" :rows="4"
                 placeholder="{{ user_input }}，请帮我..." @change="emit('update')" />
-              <div class="wf-setter__hint">使用 {{ variable }} 引用变量</div>
+              <div class="wf-setter__hint" v-pre>使用 {{ variable }} 引用变量</div>
             </el-form-item>
           </el-form>
         </div>
@@ -303,8 +303,6 @@
 </template>
 
 <script setup lang="ts" name="WorkflowSetter">
-import { ElMessageBox } from 'element-plus';
-
 interface WfNode {
   id: string;
   type: string;

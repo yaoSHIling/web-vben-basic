@@ -39,8 +39,8 @@
 
       <!-- 正在连接的线 -->
       <path
-        v-if="connecting && connectingFrom && mousePos"
-        :d="getTempEdgePath(connectingFrom, mousePos)"
+        v-if="connecting?.from && mousePos"
+        :d="getTempEdgePath(connecting.from, mousePos)"
         fill="none"
         stroke="#1890ff"
         stroke-width="2"
@@ -93,7 +93,7 @@
 </template>
 
 <script setup lang="ts" name="WorkflowCanvas">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 
 interface WfNode {
   id: string;
@@ -145,18 +145,14 @@ const nodeIcons: Record<string, string> = {
   database:  '\ud83d\udcbe',
 };
 
-// ===== 拖拽节点 =====
-let draggingNode: WfNode | null = null;
-let dragOffset = { x: 0, y: 0 };
-
 // ===== 画布平移 =====
-let isPanning = ref(false);
+const isPanning = ref(false);
 let panStart = { x: 0, y: 0 };
 
 // ===== 连接线 =====
-let isConnecting = ref(false);
-let connecting = ref<{ from: WfNode; side: 'in' | 'out' } | null>(null);
-let mousePos = ref<{ x: number; y: number } | null>(null);
+const isConnecting = ref(false);
+const connecting = ref<{ from: WfNode; side: 'in' | 'out' } | null>(null);
+const mousePos = ref<{ x: number; y: number } | null>(null);
 
 // ===== 计算属性 =====
 const selectedNode = computed({
