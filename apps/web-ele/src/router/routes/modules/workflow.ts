@@ -25,6 +25,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/workflow/instance/index.vue'),
         meta: { title: '执行记录' },
       },
+      {
+        name: 'WorkflowMyTask',
+        path: '/workflow/task',
+        component: () => import('#/views/workflow/task/index.vue'),
+        meta: { title: '待我审批', icon: 'lucide:clipboard-check' },
+      },
     ],
   },
 ];
