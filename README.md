@@ -74,9 +74,18 @@ web-vben-basic/
     │   │   ├── task.vue                       # 跟进任务页面
     │   │   ├── components/
     │   │   └── README.md
-    │   ├── _template/                         # 页面模板参考
-    │   ├── _core/                            # 系统页面（登录/404/个人中心）
-    │   └── dashboard/                         # 仪表盘
+    │   └── workflow/                          # Coze 风格工作流引擎 ⭐
+    │       ├── README.md                      # 工作流模块文档
+    │       ├── designer/                      # 可视化流程设计器
+    │       │   ├── index.vue                  # 设计器主页
+    │       │   ├── WorkflowCanvas.vue         # SVG 画布组件
+    │       │   └── WorkflowSetter.vue         # 节点配置面板
+    │       └── instance/                      # 执行记录页面
+    │           └── index.vue
+    │
+    ├── _template/                              # 页面模板参考
+    ├── _core/                                  # 系统页面（登录/404/个人中心）
+    └── dashboard/                              # 仪表盘
     │
     ├── router/routes/
     │   └── modules/
@@ -478,6 +487,37 @@ VITE_APP_API_BASE_URL=http://localhost:8080/api
 | HTTP | Axios（@vben/request） | 统一拦截/Token自动注入 |
 | 图标 | Lucide Icons | 现代简约风格 |
 | 构建 | Vite | 极速热更新 |
+
+## ⚙️ Coze 风格工作流引擎
+
+> 参考 [Coze 工作流模型](https://github.com/coze-dev/coze-studio) 实现，拖拽式可视化画布 + **12 种节点类型**。
+
+### 技术方案
+
+| 组件 | 实现方式 |
+|------|---------|
+| 画布 | 自研 SVG 连线 + div 节点（无第三方依赖）|
+| 端口连接 | in/out 桩点击拖拽创建连线 |
+| 节点面板 | HTML5 Drag & Drop API |
+| 配置面板 | Coze 风格 Setter（按节点类型动态渲染）|
+
+### 支持的节点（共 12 种）
+
+| 分类 | 节点 | 说明 |
+|------|------|------|
+| 基础 | start / end | 入口 / 结束 |
+| 逻辑 | condition / variable / loop | 条件分支 / 变量 / 循环 |
+| AI | llm / code | 大模型 / 代码脚本 |
+| 业务 | approval / http / message / database / subflow | 审批 / 请求 / 消息 / SQL / 子流程 |
+
+### 页面路径
+
+| 页面 | 路径 | 功能 |
+|------|------|------|
+| 工作流设计器 | /workflow/designer | 拖拽节点 → 连线 → 配置 → 保存/发布 |
+| 执行记录 | /workflow/instance | 执行列表 + 节点日志时间线 |
+
+详细文档：[views/workflow/README.md](apps/web-ele/src/views/workflow/README.md)
 
 ---
 
