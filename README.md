@@ -1,324 +1,670 @@
-# 🔥 web-vben-basic
+# 🔥 web-vben-basic 前端快速开发脚手架
 
-> 基于 **Vue3 + Vben Admin + Element Plus** 的企业级前端脚手架。
-> 对接 [java-backend-basic](https://github.com/yaoSHIling/java-backend-basic)，开箱即用，代码即文档。
+> 基于 **Vue3 + Vben Admin + Element Plus**，专为快速开发 **CRM / OA / 后台管理** 系统而生。
+> 配套 [java-backend-basic](https://github.com/yaoSHIling/java-backend-basic) 使用，开箱即用。
 
 [![Vue 3](https://img.shields.io/badge/Vue-3.4-green.svg)](https://vuejs.org/)
 [![Vben Admin](https://img.shields.io/badge/Vben%20Admin-2.x-blue.svg)](https://github.com/vbenjs/vue-vben-admin)
 [![Element Plus](https://img.shields.io/badge/Element%20Plus-2.x-orange.svg)](https://element-plus.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![License MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
-## 📌 项目定位
+## ⚡ 快速开始
 
-本项目是 [java-backend-basic](https://github.com/yaoSHIling/java-backend-basic) 的**配套前端**，
-面向 **CRM / OA / 后台管理系统** 的企业级 Vue3 前端解决方案。
+### 10 分钟跑起来
 
-- ✅ 对接 java-backend-basic，开箱即用
-- ✅ Vue3 + Vite + Pinia + Vue Router
-- ✅ Element Plus 企业级 UI 组件库
-- ✅ 完善的前端权限体系（页面权限 + 按钮权限）
-- ✅ 常用业务示例：客户管理（增删改查 + 跟进记录 + 任务待办）
+```bash
+# 1. 克隆项目
+git clone https://github.com/yaoSHIling/web-vben-basic.git
+cd web-vben-basic
 
----
+# 2. 安装依赖
+pnpm install
 
-## 🛠️ 技术栈
+# 3. 配置后端地址
+echo "VITE_APP_API_BASE_URL=http://localhost:8080/api" > .env.development
 
-| 分类 | 技术 | 说明 |
-|------|------|------|
-| 核心框架 | Vue 3.4 + Vite 5 | 最新组合，开发体验最佳 |
-| 状态管理 | Pinia | Vue 3 官方推荐 |
-| UI 库 | Element Plus 2.x | 企业级组件库 |
-| 类型 | TypeScript 5 | 类型安全 |
-| 构建 | Vite | 极速构建 |
-| 脚手架 | Vben Admin 2.x | 功能最全面的 Vue3 admin 模板 |
-| HTTP | Axios（已封装） | 统一请求拦截/响应处理 |
-| 图表 | ECharts | 可视化（可选） |
-| 表格 | Element Plus Table | 集成列配置/分页/筛选 |
+# 4. 启动开发
+pnpm dev:web-ele
 
----
-
-## 🚀 快速开始
+# 5. 打开浏览器
+open http://localhost:5173
+```
 
 ### 环境要求
 
 - Node.js >= 18
 - pnpm >= 8（推荐）或 npm >= 9
-
-### 安装依赖
-
-```bash
-# 使用 pnpm（推荐，速度快）
-pnpm install
-
-# 或使用 npm
-npm install
-```
-
-### 开发模式
-
-```bash
-# 启动开发服务器（Web-Ele 版本，Element Plus UI）
-pnpm dev:web-ele
-
-# 启动开发服务器（其他 UI 版本）
-pnpm dev:web-antd     # Ant Design Vue
-pnpm dev:web-naive    # Naive UI
-pnpm dev:web-tdesign  # TDesign
-```
-
-### 生产构建
-
-```bash
-pnpm build:web-ele    # 构建 Web-Ele 版本
-```
-
-### Docker 部署
-
-```bash
-# 前端构建
-pnpm build:web-ele
-
-# Nginx 部署（已配置 vue-router history 模式）
-docker run -d -p 80:80 \
-  -v $(pwd)/dist:/usr/share/nginx/html \
-  -e NGINX_HOST=your-domain.com \
-  nginx:alpine
-```
+- 后端 [java-backend-basic](https://github.com/yaoSHIling/java-backend-basic) 运行在 `localhost:8080`
 
 ---
 
 ## 📁 项目结构
 
 ```
+web-vben-basic/
+│
+├── scripts/                         # ============ 脚手架工具 ============
+│   ├── gen-module.cjs               # 一键生成 CRUD 模块（推荐）
+│   └── README.md                   # 工具使用说明
+│
+├── _templates/                     # ============ 代码模板 ============
+│   ├── api-module/                 # API 层模板（复制即用）
+│   └── page-module/                # 页面模板（复制即用）
+│
+├── apps/web-ele/src/               # ============ 主应用（Element Plus）===
+│   │
+│   ├── api/
+│   │   ├── request.ts             # Axios 封装（统一拦截/Token/错误）
+│   │   └── modules/
+│   │       ├── _template/         # API 模板文件（参考）
+│   │       ├── auth/              # 认证 API（已有）
+│   │       └── crm/               # CRM 示例（已有）
+│   │
+│   ├── views/
+│   │   ├── _core/                 # 系统页面（登录/关于/个人中心）
+│   │   ├── _template/             # 页面模板文件（参考）
+│   │   ├── dashboard/             # 仪表盘（已有）
+│   │   └── crm/                   # CRM 示例（已有）
+│   │
+│   ├── router/routes/modules/     # 路由配置（每个模块一个文件）
+│   │       ├── dashboard.ts
+│   │       ├── crm.ts
+│   │       └── _template.ts      # 路由模板（参考）
+│   │
+│   └── types/                     # 共享类型定义
+│       └── api.d.ts               # 全局 API 类型
+│
+└── docs/
+    └── integration.md             # 前后端对接说明
+```
+
+---
+
+## 🚀 快速开发流程（核心）
+
+### 第 1 步：一键生成模块
+
+```bash
+# 在项目根目录执行（交互式）
+node scripts/gen-module.cjs
+
+# 或指定参数（一次性完成）
+node scripts/gen-module.cjs --module order --title "订单管理"
+```
+
+**生成内容：**
+
+```
 apps/web-ele/src/
-│
-├── api/                        # ============ API 层 ============
-│   ├── request.ts              # Axios 封装（统一拦截/错误处理/Token）
-│   └── modules/
-│       └── crm/               # CRM 模块 API
-│           └── index.ts       # 客户管理 / 跟进记录 / 任务待办
-│
-├── views/                     # ============ 页面 ============
-│   ├── crm/                   # CRM 模块（示例）
-│   │   └── customer.vue        # 客户管理（增删改查 + 跟进 + 弹窗）
-│   └── demos/                 # Vben 官方示例页面
-│
-├── router/                   # 路由配置
-├── store/                    # Pinia 状态管理
-└── locales/                  # 国际化配置
+├── api/modules/order/         ← API 接口
+│   └── index.ts
+├── views/order/               ← 页面文件
+│   ├── index.vue             ← 列表页面
+│   └── components/           ← 子组件
+│       ├── OrderForm.vue    ← 新增/编辑弹窗
+│       └── OrderDetail.vue  ← 详情页
+└── router/routes/modules/order.ts   ← 路由注册
 ```
 
----
+### 第 2 步：对接后端 API
 
-## 🔌 API 层说明
+在生成的 `api/modules/order/index.ts` 中修改接口路径：
 
-### 对接后端地址配置
-
-**开发环境**（根目录 `.env.development`）：
-```bash
-VITE_APP_API_BASE_URL=http://localhost:8080/api
-```
-
-**生产环境**（`.env.production`）：
-```bash
-VITE_APP_API_BASE_URL=https://your-api-domain.com/api
-```
-
-### 统一响应格式
-
-后端返回格式（需与 java-backend-basic 配合）：
-```json
-{
-  "code": 0,
-  "msg": "success",
-  "data": { ... }
+```typescript
+// 对应后端接口：GET /api/order/page
+export async function pageOrdersApi(query: OrderPageQuery) {
+  return requestClient.get<PageResult<Order>>('/order/page', { params: query });
 }
 ```
 
-| 字段 | 说明 |
-|------|------|
-| `code: 0` | 成功 |
-| `code: > 0` | 业务错误（参考 `ResultCode` 枚举） |
-| `data` | 响应数据 |
+### 第 3 步：开发页面逻辑
 
-### 分页格式
+直接修改 `views/order/index.vue`，调用生成的 API 方法即可。
 
-```json
-{
-  "code": 0,
-  "data": {
-    "list": [...],
-    "total": 100,
-    "page": 1,
-    "pageSize": 10
+---
+
+## 📖 核心开发规范
+
+### 规范 1：API 层结构
+
+每个业务模块一个独立目录：
+
+```
+api/modules/{module-name}/index.ts
+```
+
+文件结构：
+```typescript
+// 1. 命名空间（类型定义放这里）
+export namespace {Module}Api {
+  // 实体类型
+  export interface Entity { id: number; ... }
+  // 分页查询参数
+  export interface PageQuery { page: number; pageSize: number; ... }
+  // 保存/更新 DTO
+  export interface SaveDTO { ... }
+}
+
+// 2. API 方法（直接调用 requestClient）
+export async function pageApi(query: {Module}Api.PageQuery) {
+  return requestClient.get<PageResult<{Module}Api.Entity>>('/{module-name}/page', { params: query });
+}
+export async function saveApi(data: {Module}Api.SaveDTO) {
+  return requestClient.post<number>('/{module-name}', data);
+}
+export async function updateApi(id: number, data: {Module}Api.SaveDTO) {
+  return requestClient.put(`/\{module-name}/$\{id}`, data);
+}
+export async function deleteApi(id: number) {
+  return requestClient.delete(`/\{module-name}/$\{id}`);
+}
+export async function getByIdApi(id: number) {
+  return requestClient.get<{Module}Api.Entity>(`/\{module-name}/$\{id}`);
+}
+```
+
+### 规范 2：页面结构（CRUD 通用模板）
+
+每个列表页面统一结构：
+
+```
+views/{module}/
+├── index.vue           ← 列表页面（含分页/搜索/操作）
+└── components/
+    ├── Form.vue        ← 新增/编辑弹窗
+    └── Detail.vue      ← 详情弹窗
+```
+
+**列表页面标准结构：**
+```vue
+<template>
+  <div>
+    <!-- 1. 搜索栏 -->
+    <SearchBar @query="handleQuery" @reset="resetQuery" />
+
+    <!-- 2. 工具栏 -->
+    <Toolbar>
+      <template #left>
+        <el-button type="primary" @click="handleAdd">新增</el-button>
+      </template>
+    </Toolbar>
+
+    <!-- 3. 数据表格 -->
+    <el-table :data="tableData" v-loading="loading">
+      <el-table-column type="index" label="序号" />
+      <!-- 动态列 -->
+      <el-table-column v-for="col in columns" :key="col.prop" v-bind="col" />
+      <!-- 操作列 -->
+      <el-table-column label="操作" fixed="right">
+        <template #default="{ row }">
+          <el-button link @click="handleEdit(row)">编辑</el-button>
+          <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- 4. 分页 -->
+    <el-pagination
+      v-model:page="queryParams.page"
+      v-model:page-size="queryParams.pageSize"
+      :total="total"
+      @pagination="loadData"
+    />
+
+    <!-- 5. 弹窗 -->
+    <FormDialog v-model="dialogVisible" :data="currentRow" @success="loadData" />
+  </div>
+</template>
+```
+
+### 规范 3：路由注册
+
+每个模块一个路由文件：
+
+```typescript
+// apps/web-ele/src/router/routes/modules/order.ts
+import type { RouteRecordRaw } from 'vue-router';
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/order',
+    name: 'Order',
+    meta: { title: '订单管理', icon: 'lucide:file-text' },
+    children: [
+      {
+        name: 'OrderList',
+        path: '/order/list',
+        component: () => import('#/views/order/index.vue'),
+        meta: { title: '订单列表' },
+      },
+    ],
+  },
+];
+
+export default routes;
+```
+
+### 规范 4：Types 定义
+
+在 `api/modules/{module}/index.ts` 中定义所有类型，
+在 `types/api.d.ts` 中注册全局类型：
+
+```typescript
+// types/api.d.ts
+import type { CrmApi } from '#/api/modules/crm';
+import type { OrderApi } from '#/api/modules/order';  // 新增
+
+declare global {
+  interface ApiModuleMap {
+    crm: CrmApi;
+    order: OrderApi;  // 新增
   }
 }
 ```
 
-### 请求拦截器
+---
 
-- 自动在请求头注入 `Authorization: Bearer {token}`
-- Token 过期时自动刷新
-- 刷新失败自动跳转登录页
+## 🛠️ 脚手架工具详解
 
-### 响应拦截器
+### gen-module.cjs — 一键生成 CRUD 模块
 
-- `code === 0`：直接返回 `data` 数据
-- `code !== 0`：自动 `ElMessage.error()` 弹出错误信息
+**交互式使用：**
+```bash
+node scripts/gen-module.cjs
+```
+
+**参数说明：**
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `--module` | 模块名（英文，目录名） | `order` |
+| `--title` | 模块标题（菜单显示） | `订单管理` |
+| `--icon` | 菜单图标 | `lucide:file-text` |
+| `--skip` | 跳过生成步骤 | `--skip api` |
+
+**生成后你需要做的：**
+
+1. **实现 API 接口**（`api/modules/{module}/index.ts`）
+   - 将 `requestClient.get('/placeholder')` 改为真实接口路径
+   - 添加 TypeScript 类型
+
+2. **配置路由权限**（如果需要）
+   - 在 Vben Admin 后台菜单管理中添加
+   - 或手动修改 `router/routes/modules/{module}.ts`
+
+3. **开发页面逻辑**（`views/{module}/index.vue`）
+   - 编写搜索表单
+   - 编写表格列
+   - 编写弹窗表单
 
 ---
 
-## 📋 CRM 模块示例
+## 🎨 常用组件速查
 
-> 以下展示一个完整的 **客户管理** 业务场景，包含列表、新增、编辑、跟进记录。
+### 表格
 
-### API 调用示例
+```vue
+<el-table :data="tableData" stripe v-loading="loading">
+  <el-table-column type="index" label="序号" width="60" />
+  <el-table-column prop="name" label="名称" min-width="140" />
+  <el-table-column prop="status" label="状态" width="100" align="center">
+    <template #default="{ row }">
+      <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+    </template>
+  </el-table-column>
+</el-table>
+```
+
+### 分页
+
+```vue
+<el-pagination
+  v-model:page="queryParams.page"
+  v-model:page-size="queryParams.pageSize"
+  :total="total"
+  :page-sizes="[10, 20, 50, 100]"
+  layout="total, sizes, prev, pager, next"
+  @pagination="loadData"
+/>
+```
+
+### 弹窗表单
+
+```vue
+<el-dialog v-model="visible" title="标题" width="500px" destroy-on-close>
+  <el-form ref="formRef" :model="formData" :rules="rules" label-width="90">
+    <el-form-item label="名称" prop="name">
+      <el-input v-model="formData.name" />
+    </el-form-item>
+  </el-form>
+  <template #footer>
+    <el-button @click="visible = false">取消</el-button>
+    <el-button type="primary" :loading="loading" @click="handleSubmit">确定</el-button>
+  </template>
+</el-dialog>
+```
+
+### 搜索栏
+
+```vue
+<el-form inline :model="queryParams">
+  <el-form-item label="名称">
+    <el-input v-model="queryParams.name" clearable @keyup.enter="handleQuery" />
+  </el-form-item>
+  <el-form-item label="状态">
+    <el-select v-model="queryParams.status" clearable>
+      <el-option label="启用" :value="1" />
+      <el-option label="禁用" :value="0" />
+    </el-select>
+  </el-form-item>
+  <el-form-item>
+    <el-button type="primary" @click="handleQuery">搜索</el-button>
+    <el-button @click="resetQuery">重置</el-button>
+  </el-form-item>
+</el-form>
+```
+
+### 日期时间
+
+```vue
+<el-date-picker
+  v-model="queryParams.dateRange"
+  type="datetimerange"
+  range-separator="至"
+  start-placeholder="开始时间"
+  end-placeholder="结束时间"
+  value-format="YYYY-MM-DD HH:mm:ss"
+/>
+```
+
+---
+
+## 📋 模板文件（直接复制使用）
+
+### API 模板
+
+位置：`_templates/api-module/index.ts`
 
 ```typescript
+import type { PageResult, PageParams } from '#/types';
+import { requestClient } from '#/api/request';
+
+export namespace {Module}Api {
+  export interface Entity {
+    id: number;
+    name: string;
+    status: number;
+    createdTime: string;
+  }
+
+  export interface PageQuery extends PageParams {
+    name?: string;
+    status?: number;
+  }
+
+  export interface SaveDTO {
+    name: string;
+    status: number;
+  }
+}
+
+export async function page{Module}Api(query: {Module}Api.PageQuery) {
+  return requestClient.get<PageResult<{Module}Api.Entity>>(
+    '/{module-name}/page',
+    { params: query }
+  );
+}
+
+export async function getByIdApi(id: number) {
+  return requestClient.get<{Module}Api.Entity>(`/{module-name}/$\{id}`);
+}
+
+export async function saveApi(data: {Module}Api.SaveDTO) {
+  return requestClient.post<number>('/{module-name}', data);
+}
+
+export async function updateApi(id: number, data: {Module}Api.SaveDTO) {
+  return requestClient.put(`/\{module-name}/$\{id}`, data);
+}
+
+export async function deleteApi(id: number) {
+  return requestClient.delete(`/\{module-name}/$\{id}`);
+}
+```
+
+### 页面模板
+
+位置：`_templates/page-module/index.vue`
+
+```vue
+<template>
+  <div>
+    <!-- 搜索栏 -->
+    <el-form inline :model="queryParams" label-width="80">
+      <el-form-item label="名称">
+        <el-input v-model="queryParams.name" clearable @keyup.enter="handleQuery" />
+      </el-form-item>
+      <el-form-item label="状态">
+        <el-select v-model="queryParams.status" clearable>
+          <el-option label="启用" :value="1" />
+          <el-option label="禁用" :value="0" />
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="handleQuery">搜索</el-button>
+        <el-button @click="resetQuery">重置</el-button>
+      </el-form-item>
+    </el-form>
+
+    <!-- 工具栏 -->
+    <div class="mb-4">
+      <el-button type="primary" @click="handleAdd">新增</el-button>
+    </div>
+
+    <!-- 数据表格 -->
+    <el-table :data="tableData" stripe v-loading="loading">
+      <el-table-column type="index" label="序号" width="60" align="center" />
+      <el-table-column prop="name" label="名称" min-width="140" />
+      <el-table-column prop="status" label="状态" width="100" align="center">
+        <template #default="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'info'">
+            {{ row.status === 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="createdTime" label="创建时间" width="160" />
+      <el-table-column label="操作" width="160" fixed="right">
+        <template #default="{ row }">
+          <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
+          <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- 分页 -->
+    <el-pagination
+      v-model:page="queryParams.page"
+      v-model:page-size="queryParams.pageSize"
+      :total="total"
+      :page-sizes="[10, 20, 50]"
+      layout="total, sizes, prev, pager, next"
+      @pagination="loadData"
+    />
+
+    <!-- 弹窗 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" destroy-on-close>
+      <el-form ref="formRef" :model="formData" :rules="formRules" label-width="90">
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入名称" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="formData.status">
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, onMounted } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import {
-  pageCustomersApi,
-  saveCustomerApi,
-  addFollowupApi,
-  pendingTasksApi,
-} from '#/api/modules/crm';
+  page{Module}Api,
+  save{Module}Api,
+  update{Module}Api,
+  delete{Module}Api,
+} from '#/api/modules/{module}';
 
-// 1. 分页查询客户
-const res = await pageCustomersApi({ page: 1, pageSize: 10, name: '张三' });
-console.log(res.list);    // 客户列表
-console.log(res.total);   // 总数
+definePage({ meta: { title: '{Title}' } });
 
-// 2. 新增客户
-await saveCustomerApi({
-  name: '北京科技有限公司',
-  mobile: '13800138000',
-  company: '北京科技有限公司',
-  industry: 'IT',
-  level: 1,   // 重点客户
-});
+// ======== 数据 ========
+const loading = ref(false);
+const total = ref(0);
+const tableData = ref<any[]>([]);
+const queryParams = reactive({ page: 1, pageSize: 10, name: '', status: undefined as number | undefined });
 
-// 3. 添加跟进记录
-await addFollowupApi({
-  customerId: 1,
-  followupType: 1,       // 电话
-  content: '初次电话沟通，客户表示有采购意向',
-  nextPlan: '下周安排上门拜访',
-  nextFollowupAt: '2024-04-25 10:00:00',
-});
+// ======== 弹窗 ========
+const dialogVisible = ref(false);
+const dialogTitle = ref('');
+const isEdit = ref(false);
+const submitLoading = ref(false);
+const formRef = ref();
+const formData = reactive({ id: 0, name: '', status: 1 });
+const formRules = { name: [{ required: true, message: '名称不能为空', trigger: 'blur' }] };
 
-// 4. 获取我的待办任务
-const tasks = await pendingTasksApi();
-console.log(tasks);  // 待办列表
-```
-
-### 前端页面示例
-
-客户管理页面路径：`/views/crm/customer.vue`
-
-**功能清单：**
-
-| 功能 | 说明 |
-|------|------|
-| 分页列表 | 搜索 + 等级/状态筛选 |
-| 新增客户 | 弹窗表单 |
-| 编辑客户 | 弹窗表单 |
-| 删除客户 | 二次确认 |
-| 添加跟进 | 记录跟进内容 + 下次计划 |
-| 等级标签 | 重点(红) / 重要(橙) / 普通(灰) |
-| 状态标签 | 潜在 / 意向 / 成交 / 流失 |
-
----
-
-## 📖 与后端对接说明
-
-### Step 1：后端启动
-
-```bash
-cd ../java-backend-basic
-docker-compose -f docker/docker-compose.yml up -d
-# 或本地启动：mvn spring-boot:run
-```
-
-确保后端运行在 `http://localhost:8080/api`
-
-### Step 2：前端配置
-
-```bash
-# .env.development
-VITE_APP_API_BASE_URL=http://localhost:8080/api
-VITE_APP_TITLE=企业管理系统
-```
-
-### Step 3：登录接口对接
-
-前端登录请求：
-```typescript
-// apps/web-ele/src/api/core/auth.ts
-POST /api/auth/login
-Body: { username: "admin", password: "123456" }
-```
-
-后端返回：
-```json
-{
-  "code": 0,
-  "msg": "success",
-  "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiJ9..."
-  }
+// ======== 加载数据 ========
+async function loadData() {
+  loading.value = true;
+  try {
+    const res = await page{Module}Api(queryParams);
+    tableData.value = res.list;
+    total.value = res.total;
+  } catch { ElMessage.error('加载失败'); }
+  finally { loading.value = false; }
 }
-```
 
-### Step 4：验证联通性
+function handleQuery() { queryParams.page = 1; loadData(); }
+function resetQuery() { Object.assign(queryParams, { page: 1, name: '', status: undefined }); loadData(); }
 
-```bash
-# 登录
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"123456"}'
+// ======== 增删改 ========
+function handleAdd() {
+  isEdit.value = false; dialogTitle.value = '新增'; Object.assign(formData, { id: 0, name: '', status: 1 });
+  dialogVisible.value = true;
+}
+function handleEdit(row: any) {
+  isEdit.value = true; dialogTitle.value = '编辑'; Object.assign(formData, { id: row.id, name: row.name, status: row.status });
+  dialogVisible.value = true;
+}
+async function handleSubmit() {
+  const valid = await formRef.value?.validate().catch(() => false);
+  if (!valid) return;
+  submitLoading.value = true;
+  try {
+    isEdit.value ? await update{Module}Api(formData.id, formData) : await save{Module}Api(formData);
+    ElMessage.success(isEdit.value ? '修改成功' : '新增成功');
+    dialogVisible.value = false; loadData();
+  } catch { ElMessage.error('操作失败'); }
+  finally { submitLoading.value = false; }
+}
+async function handleDelete(row: any) {
+  await ElMessageBox.confirm(`确定删除"${row.name}"吗？`, '提示', { type: 'warning' });
+  await delete{Module}Api(row.id);
+  ElMessage.success('删除成功'); loadData();
+}
 
-# 访问 Swagger
-open http://localhost:8080/api/swagger-ui.html
+onMounted(loadData);
+</script>
 ```
 
 ---
 
-## 🎨 自定义开发
+## 📂 常见场景处理
 
-### 新增业务模块
-
-```
-# 1. 新建 API 文件
-apps/web-ele/src/api/modules/your-module/index.ts
-
-# 2. 新建页面
-apps/web-ele/src/views/your-module/YourPage.vue
-
-# 3. 在 router 中注册路由
-apps/web-ele/src/router/routes/index.ts
-```
-
-### 新增菜单
-
-在 Vben Admin 的后台动态菜单管理中配置，或在前端路由文件中新增：
-```typescript
-{
-  path: '/your-module',
-  component: Layout,
-  meta: { title: '模块名称', icon: 'lucide:box' },
-  children: [
-    { path: 'page', component: () => import('#/views/your-module/YourPage.vue') }
-  ]
-}
-```
-
-### 新增 API 方法
+### 场景 1：下拉选项（字典/枚举）
 
 ```typescript
-// apps/web-ele/src/api/modules/your-module/index.ts
-export async function getDataApi(id: number) {
-  return requestClient.get<YourDataType>(`/your-module/${id}`);
+// 从后端获取
+const statusOptions = ref([{ label: '启用', value: 1 }, { label: '禁用', value: 0 }]);
+
+// 或从字典服务获取
+import { useDictStore } from '#/store';
+const dictStore = useDictStore();
+const statusOptions = computed(() => dictStore.getOptions('order_status'));
+```
+
+```vue
+<el-select v-model="formData.status">
+  <el-option v-for="opt in statusOptions" :key="opt.value" v-bind="opt" />
+</el-select>
+```
+
+### 场景 2：日期范围筛选
+
+```typescript
+const queryParams = reactive({
+  page: 1,
+  pageSize: 10,
+  startTime: '',
+  endTime: '',
+});
+```
+
+```vue
+<el-date-picker
+  v-model="dateRange"
+  type="datetimerange"
+  range-separator="至"
+  value-format="YYYY-MM-DD HH:mm:ss"
+  @change="(val) => { queryParams.startTime = val?.[0]; queryParams.endTime = val?.[1]; handleQuery(); }"
+/>
+```
+
+### 场景 3：表格列权限控制
+
+```vue
+<el-table-column
+  v-if="hasPermission('order:export')"
+  label="导出"
+  width="80"
+>
+  <template #default="{ row }">
+    <el-button link type="primary" @click="handleExport(row)">导出</el-button>
+  </template>
+</el-table-column>
+```
+
+### 场景 4：文件上传
+
+```vue
+<el-upload
+  :action="uploadUrl"
+  :headers="{ Authorization: `Bearer ${accessToken}` }"
+  :on-success="(res) => { formData.fileUrl = res.data.url; ElMessage.success('上传成功'); }"
+  :on-error="() => ElMessage.error('上传失败')"
+  accept=".xlsx,.xls"
+>
+  <el-button type="primary">上传文件</el-button>
+</el-upload>
+```
+
+### 场景 5：确认框 + 批量操作
+
+```typescript
+async function handleBatchDelete() {
+  if (selectedRows.value.length === 0) { ElMessage.warning('请先选择'); return; }
+  await ElMessageBox.confirm(`确定删除选中的 ${selectedRows.value.length} 条数据吗？`, '批量删除', { type: 'warning' });
+  await Promise.all(selectedRows.value.map((r) => deleteApi(r.id)));
+  ElMessage.success('批量删除成功'); loadData();
 }
 ```
 
@@ -328,10 +674,11 @@ export async function getDataApi(id: number) {
 
 | 文档 | 地址 |
 |------|------|
-| **Swagger API 文档** | http://localhost:8080/api/swagger-ui.html |
-| **Vben Admin 官方文档** | https://vben.vvbin.cn/docs/ |
-| **Element Plus** | https://element-plus.org/ |
-| **Vue3 官方文档** | https://vuejs.org/ |
+| Swagger API 文档 | http://localhost:8080/api/swagger-ui.html |
+| Vben Admin 官方文档 | https://vben.vvbin.cn/docs/ |
+| Element Plus 组件 | https://element-plus.org/ |
+| Vue3 官方文档 | https://vuejs.org/ |
+| TypeScript 手册 | https://www.typescriptlang.org/docs/ |
 
 ---
 
